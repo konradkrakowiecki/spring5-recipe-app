@@ -18,9 +18,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.mockito.Mockito.*;
 
-/**
- * Created by jt on 6/17/17.
- */
 public class RecipeServiceImplTest {
 
     RecipeServiceImpl recipeService;
@@ -71,5 +68,4 @@ public class RecipeServiceImplTest {
         verify(recipeRepository, times(1)).findAll();
         verify(recipeRepository, never()).findById(anyLong());
     }
-
 }
