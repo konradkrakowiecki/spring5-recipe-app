@@ -2,6 +2,7 @@ package pl.iamkonradkrakowiecki.spring5recipeapp.services;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import pl.iamkonradkrakowiecki.spring5recipeapp.commands.IngredientCommand;
 import pl.iamkonradkrakowiecki.spring5recipeapp.converters.IngredientCommandToIngredient;
 import pl.iamkonradkrakowiecki.spring5recipeapp.converters.IngredientToIngredientCommand;
@@ -10,7 +11,6 @@ import pl.iamkonradkrakowiecki.spring5recipeapp.domain.Recipe;
 import pl.iamkonradkrakowiecki.spring5recipeapp.repositories.RecipeRepository;
 import pl.iamkonradkrakowiecki.spring5recipeapp.repositories.UnitOfMeasureRepository;
 
-import javax.transaction.Transactional;
 import java.util.Optional;
 
 @Slf4j
@@ -83,16 +83,29 @@ public class IngredientServiceImpl implements IngredientService {
                         .orElseThrow(() -> new RuntimeException("UOM NOT FOUND"))); //todo address this
             } else {
                 //add new Ingredient
-                recipe.addIngredient(ingredientCommandToIngredient.convert(command));
+                Ingredient ingredient = ingredientCommandToIngredient.convert(command);
+                ingredient.setRecipe(recipe);
+                recipe.addIngredient(ingredient);
             }
 
             Recipe savedRecipe = recipeRepository.save(recipe);
 
-            //to do check for fail
-            return ingredientToIngredientCommand.convert(savedRecipe.getIngredients().stream()
+            Optional<Ingredient> savedIngredientOptional = savedRecipe.getIngredients().stream()
                     .filter(recipeIngredients -> recipeIngredients.getId().equals(command.getId()))
-                    .findFirst()
-                    .get());
+                    .findFirst();
+
+            //check by description
+            if(!savedIngredientOptional.isPresent()){
+                //not totally safe... But best guess
+                savedIngredientOptional = savedRecipe.getIngredients().stream()
+                        .filter(recipeIngredients -> recipeIngredients.getDescription().equals(command.getDescription()))
+                        .filter(recipeIngredients -> recipeIngredients.getAmount().equals(command.getAmount()))
+                        .filter(recipeIngredients -> recipeIngredients.getUom().getId().equals(command.getUom().getId()))
+                        .findFirst();
+            }
+
+            //to do check for fail
+            return ingredientToIngredientCommand.convert(savedIngredientOptional.get());
         }
     }
 }
